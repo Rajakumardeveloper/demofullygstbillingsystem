@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAGAR JEWELLERS | Invoice with GST</title>
+    <title>SAGAR JEWELLERS | Invoice </title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -54,7 +54,8 @@
         .payment-group { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
         .payment-group label { display: flex; align-items: center; gap: 4px; font-size: 9px; cursor: pointer; }
         .print-payment-display { display: none; }
-        .print-name, .print-phone, .print-address, .print-place, .print-pan, .print-aadhar {
+        .print-name, .print-phone, .print-address, .print-place, .print-pan, .print-aadhar,
+        .print-date, .print-discount, .print-cgst-percent, .print-sgst-percent {
             display: none;
         }
         .items-wrapper { border: 1px solid #000; margin: 15px 0; overflow-x: auto; }
@@ -108,27 +109,50 @@
             .print-only-text {
                 display: inline-block !important;
             }
-            /* Hide ALL input and textarea fields – no double printing */
-            input, textarea {
+            /* Hide ALL input, textarea, and interactive elements */
+            input, textarea, select, button {
                 display: none !important;
             }
-            /* Show print spans for customer details */
-            .print-name, .print-phone, .print-address, .print-place, .print-pan, .print-aadhar {
+            /* Show print spans for customer and shipping details */
+            .print-name, .print-phone, .print-address, .print-place, .print-pan, .print-aadhar,
+            .print-date, .print-discount, .print-cgst-percent, .print-sgst-percent {
+                display: inline !important;
+                font-weight: normal;
+            }
+            .print-cgst-percent, .print-sgst-percent {
+                display: inline-block !important;
+                margin: 0 2px;
+            }
+            /* Ensure GST rows are visible unless data-hidden="true" */
+            .gst-row[data-hidden="true"] {
+                display: none !important;
+            }
+            .gst-row {
+                display: flex !important;
+                justify-content: space-between !important;
+            }
+            /* Ledger visibility */
+            .ledger-summary {
                 display: block !important;
-                white-space: pre-wrap !important;
-                word-wrap: break-word !important;
-                overflow-wrap: break-word !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                font-size: 10px !important;
-                font-weight: normal !important;
-                color: black !important;
-                line-height: 1.4 !important;
+                font-size: 9px !important;
+                font-weight: bold !important;
+                background: #f0f0f0 !important;
+                padding: 4px 6px !important;
+                border: 1px solid #aaa !important;
+                margin-top: 6px !important;
+            }
+            .ledger-list {
+                display: block !important;
+                font-size: 9px !important;
+                border: 1px solid #ddd !important;
+            }
+            .ledger-item {
+                display: flex !important;
+                justify-content: space-between !important;
+                padding: 3px 6px !important;
+                border-bottom: 1px solid #eee !important;
             }
             .meta-row.pan-row[data-empty="true"], .meta-row.aadhar-row[data-empty="true"] {
-                display: none !important;
-            }
-            .gst-row[data-hidden="true"] {
                 display: none !important;
             }
             .vendor-header, .meta-box, .tax-card, .amount-card, .sign-box { border: 1px solid black !important; }
@@ -308,6 +332,16 @@
             const netCell = rows[i].cells[5];
             if (netCell) netCell.innerText = itemsData[i].netWt.toFixed(3);
         }
+        
+        // Update print spans for discount and GST percentages
+        const discountSpan = document.getElementById('printDiscountSpan');
+        if (discountSpan) discountSpan.innerText = '₹' + discount.toFixed(2);
+        
+        const cgstPercentSpan = document.getElementById('printCgstPercentSpan');
+        if (cgstPercentSpan) cgstPercentSpan.innerText = cgstPercent.toFixed(1);
+        
+        const sgstPercentSpan = document.getElementById('printSgstPercentSpan');
+        if (sgstPercentSpan) sgstPercentSpan.innerText = sgstPercent.toFixed(1);
     }
 
     function buildInvoiceHTML() {
@@ -354,7 +388,10 @@
                     </div></div>
                 </div>
                 <div class="meta-box"><div class="meta-title">Shipping Details & Ledger</div>
-                    <div class="meta-row"><div class="meta-label">Date</div><div class="meta-value"><input type="text" id="modalBillDate" value="${today}" readonly style="background:#f0f0f0;"></div></div>
+                    <div class="meta-row"><div class="meta-label">Date</div><div class="meta-value">
+                        <input type="text" id="modalBillDate" value="${today}" readonly style="background:#f0f0f0;">
+                        <span class="print-date" id="printDateSpan">${today}</span>
+                    </div></div>
                     <div class="meta-row"><div class="meta-label">Place of Supply</div><div class="meta-value">
                         <input type="text" id="modalPlaceSupply" placeholder="Enter State">
                         <span class="print-place" id="printPlaceSpan"></span>
@@ -367,7 +404,10 @@
                         </div>
                         <div class="print-payment-display" id="printPaymentDisplay"></div>
                     </div></div>
-                    <div class="meta-row"><div class="meta-label">Discount (₹)</div><div class="meta-value"><input type="number" id="modalDiscount" value="0" step="1" oninput="recalcModalTotals()"></div></div>
+                    <div class="meta-row"><div class="meta-label">Discount (₹)</div><div class="meta-value">
+                        <input type="number" id="modalDiscount" value="0" step="1" oninput="recalcModalTotals()">
+                        <span class="print-discount" id="printDiscountSpan">₹0.00</span>
+                    </div></div>
                     <div class="meta-row"><div class="meta-label">Payment Ledger</div><div class="meta-value"><div id="ledgerContainer"></div></div></div>
                 </div>
             </div>
@@ -381,11 +421,11 @@
                 <div class="tax-row"><span>Discount :</span><span id="modalDiscountShow">₹0.00</span></div>
                 <div class="tax-row"><span>Taxable Value :</span><span id="modalTaxable">₹0.00</span></div>
                 <div class="tax-row gst-row">
-                    <span>CGST (<input type="number" id="cgstPercent" value="1.5" step="0.1" style="width:45px;" oninput="recalcModalTotals()">%) :</span>
+                    <span>CGST (<input type="number" id="cgstPercent" value="1.5" step="0.1" style="width:45px;" oninput="recalcModalTotals()">%) : <span class="print-cgst-percent" id="printCgstPercentSpan" style="display:none;"></span></span>
                     <span id="modalCGST">₹0.00</span>
                 </div>
                 <div class="tax-row gst-row">
-                    <span>SGST (<input type="number" id="sgstPercent" value="1.5" step="0.1" style="width:45px;" oninput="recalcModalTotals()">%) :</span>
+                    <span>SGST (<input type="number" id="sgstPercent" value="1.5" step="0.1" style="width:45px;" oninput="recalcModalTotals()">%) : <span class="print-sgst-percent" id="printSgstPercentSpan" style="display:none;"></span></span>
                     <span id="modalSGST">₹0.00</span>
                 </div>
                 <div class="tax-row gst-row"><span>Total GST :</span><span id="modalTotalGST">₹0.00</span></div>
@@ -413,6 +453,44 @@
         const placeSpan = document.getElementById('printPlaceSpan');
         if (placeInput && placeSpan) placeInput.addEventListener('input', () => placeSpan.innerText = placeInput.value);
         
+        const dateInput = document.getElementById('modalBillDate');
+        const dateSpan = document.getElementById('printDateSpan');
+        if (dateInput && dateSpan) {
+            dateInput.addEventListener('change', () => dateSpan.innerText = dateInput.value);
+            dateSpan.innerText = dateInput.value;
+        }
+        
+        const discountInput = document.getElementById('modalDiscount');
+        const discountSpan = document.getElementById('printDiscountSpan');
+        if (discountInput && discountSpan) {
+            discountInput.addEventListener('input', () => {
+                let val = parseFloat(discountInput.value) || 0;
+                discountSpan.innerText = '₹' + val.toFixed(2);
+            });
+            discountSpan.innerText = '₹' + (parseFloat(discountInput.value) || 0).toFixed(2);
+        }
+        
+        // GST percentage print spans
+        const cgstPercentInput = document.getElementById('cgstPercent');
+        const cgstPercentSpan = document.getElementById('printCgstPercentSpan');
+        if (cgstPercentInput && cgstPercentSpan) {
+            const updateCgstSpan = () => {
+                cgstPercentSpan.innerText = parseFloat(cgstPercentInput.value || 0).toFixed(1);
+            };
+            cgstPercentInput.addEventListener('input', updateCgstSpan);
+            updateCgstSpan();
+        }
+        
+        const sgstPercentInput = document.getElementById('sgstPercent');
+        const sgstPercentSpan = document.getElementById('printSgstPercentSpan');
+        if (sgstPercentInput && sgstPercentSpan) {
+            const updateSgstSpan = () => {
+                sgstPercentSpan.innerText = parseFloat(sgstPercentInput.value || 0).toFixed(1);
+            };
+            sgstPercentInput.addEventListener('input', updateSgstSpan);
+            updateSgstSpan();
+        }
+        
         const panInput = document.getElementById('modalCustPan');
         const panSpan = document.getElementById('printPanSpan');
         const panRow = document.getElementById('panRow');
@@ -435,16 +513,19 @@
             });
         }
         
+        // Payment mode display update
+        const updatePaymentDisplay = () => {
+            let selected = [];
+            document.querySelectorAll('#modalPaymentGroup input:checked').forEach(cb => selected.push(cb.value));
+            const paymentSpan = document.getElementById('printPaymentDisplay');
+            if (paymentSpan) paymentSpan.innerHTML = selected.join(', ') || 'Not Selected';
+        };
+        document.querySelectorAll('#modalPaymentGroup input').forEach(cb => cb.addEventListener('change', updatePaymentDisplay));
+        updatePaymentDisplay();
+        
         if (!itemsData.length) addModalItem();
         else renderModalItems();
         recalcModalTotals();
-        updatePrintPaymentDisplay();
-    }
-
-    function updatePrintPaymentDisplay() {
-        let selected = [];
-        document.querySelectorAll('#modalPaymentGroup input:checked').forEach(cb => selected.push(cb.value));
-        document.getElementById('printPaymentDisplay').innerHTML = selected.join(', ') || 'Not Selected';
     }
 
     window.addModalItem = function() {
@@ -689,6 +770,9 @@
     };
 
     function prepareForPrint() {
+        // Recalculate totals to ensure GST visibility and all values are fresh
+        recalcModalTotals();
+        
         // Final sync of all print spans before printing
         const nameSpan = document.getElementById('printNameSpan');
         const nameInput = document.getElementById('modalCustName');
@@ -705,6 +789,30 @@
         const placeSpan = document.getElementById('printPlaceSpan');
         const placeInput = document.getElementById('modalPlaceSupply');
         if (placeSpan && placeInput) placeSpan.innerText = placeInput.value;
+        
+        const dateSpan = document.getElementById('printDateSpan');
+        const dateInput = document.getElementById('modalBillDate');
+        if (dateSpan && dateInput) dateSpan.innerText = dateInput.value;
+        
+        const discountSpan = document.getElementById('printDiscountSpan');
+        const discountInput = document.getElementById('modalDiscount');
+        if (discountSpan && discountInput) {
+            let val = parseFloat(discountInput.value) || 0;
+            discountSpan.innerText = '₹' + val.toFixed(2);
+        }
+        
+        // GST percentage spans
+        const cgstPercentSpan = document.getElementById('printCgstPercentSpan');
+        const cgstPercentInput = document.getElementById('cgstPercent');
+        if (cgstPercentSpan && cgstPercentInput) {
+            cgstPercentSpan.innerText = parseFloat(cgstPercentInput.value || 0).toFixed(1);
+        }
+        
+        const sgstPercentSpan = document.getElementById('printSgstPercentSpan');
+        const sgstPercentInput = document.getElementById('sgstPercent');
+        if (sgstPercentSpan && sgstPercentInput) {
+            sgstPercentSpan.innerText = parseFloat(sgstPercentInput.value || 0).toFixed(1);
+        }
         
         const panSpan = document.getElementById('printPanSpan');
         const panInput = document.getElementById('modalCustPan');
@@ -724,7 +832,11 @@
             aadharRow.setAttribute('data-empty', val.trim() === '' ? 'true' : 'false');
         }
         
-        updatePrintPaymentDisplay();
+        // Update payment display
+        let selected = [];
+        document.querySelectorAll('#modalPaymentGroup input:checked').forEach(cb => selected.push(cb.value));
+        const paymentSpan = document.getElementById('printPaymentDisplay');
+        if (paymentSpan) paymentSpan.innerHTML = selected.join(', ') || 'Not Selected';
     }
 
     async function saveCurrentInvoice() {
@@ -802,7 +914,6 @@
         if (inv.custPhone) renderLedger(inv.custPhone);
         renderModalItems();
         recalcModalTotals();
-        updatePrintPaymentDisplay();
         // Trigger print span sync for loaded data
         const nameSpan = document.getElementById('printNameSpan');
         if (nameSpan) nameSpan.innerText = inv.custName||'';
@@ -812,6 +923,14 @@
         if (addrSpan) addrSpan.innerText = inv.custAddress||'';
         const placeSpan = document.getElementById('printPlaceSpan');
         if (placeSpan) placeSpan.innerText = inv.placeOfSupply||'';
+        const dateSpan = document.getElementById('printDateSpan');
+        if (dateSpan) dateSpan.innerText = inv.date||new Date().toLocaleDateString('en-GB');
+        const discountSpan = document.getElementById('printDiscountSpan');
+        if (discountSpan) discountSpan.innerText = '₹' + (inv.discount||0).toFixed(2);
+        const cgstPercentSpan = document.getElementById('printCgstPercentSpan');
+        if (cgstPercentSpan) cgstPercentSpan.innerText = (inv.cgstPercent || 1.5).toFixed(1);
+        const sgstPercentSpan = document.getElementById('printSgstPercentSpan');
+        if (sgstPercentSpan) sgstPercentSpan.innerText = (inv.sgstPercent || 1.5).toFixed(1);
         const panSpan = document.getElementById('printPanSpan');
         if (panSpan) panSpan.innerText = inv.custPan||'';
         const aadharSpan = document.getElementById('printAadharSpan');
@@ -820,6 +939,9 @@
         if (panRow) panRow.setAttribute('data-empty', !inv.custPan || inv.custPan.trim() === '');
         const aadharRow = document.getElementById('aadharRow');
         if (aadharRow) aadharRow.setAttribute('data-empty', !inv.custAadhar || inv.custAadhar.trim() === '');
+        let selected = inv.paymentModes || [];
+        const paymentSpan = document.getElementById('printPaymentDisplay');
+        if (paymentSpan) paymentSpan.innerHTML = selected.join(', ') || 'Not Selected';
         return true;
     }
 
